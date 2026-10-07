@@ -136,7 +136,6 @@ impl QualitySearch {
 
             match (oversized, fitting) {
                 (Some((over_crf, over_size)), Some((fit_crf, fit_size))) => {
-
                     let predicted = interpolate_crf(
                         (over_crf, over_size),
                         (fit_crf, fit_size),
