@@ -1,5 +1,5 @@
 [package]
-name = "fp"
+name = "ffrp"
 version = "0.1.0"
 edition = "2024"
 description = "A simple interactive media compression CLI powered by FFmpeg"
@@ -8,6 +8,10 @@ repository = "https://github.com/SATVIKsynopsis/fp"
 readme = "README.md"
 keywords = ["ffmpeg", "video", "compression", "cli", "media"]
 categories = ["command-line-utilities", "multimedia"]
+
+[[bin]]
+name = "fp"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"
