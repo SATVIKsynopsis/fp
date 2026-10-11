@@ -1,89 +1,107 @@
 # fp
 
-`fp` compresses video to fit a user-specified maximum file size. It currently supports video compression only.
+**Give it a size. It figures out the compression.**
 
-## Installation and requirements
 
-The crates.io package is named `ffrp`; Cargo installs the `fp` command:
+https://github.com/user-attachments/assets/2d6f609a-dc4c-4168-8f86-0d0eafe98aef
 
-```sh
+
+Need a video under 25 MB for Discord, email, or an upload form? Skip the bitrate math and the FFmpeg flags:
+
+```
+fp compress video.mp4 --size 25mb
+```
+
+`fp` tests a few quality settings, measures the real output size of each and keeps the best one that fits under your limit.
+
+## Example
+
+A real run on a 1080p, 4:57 video:
+
+```
+$ fp compress without-me.mp4 --size 25mb
+Analyzing video...
+
+Input:      without-me.mp4
+Original:   99.8 MB
+Duration:   4:57
+Resolution: 1920x1080
+Target max: 25.0 MB
+Audio:      128 kbps AAC
+Estimated video bitrate: 463 kbps (Very low)
+
+Finding the best candidate under 25.0 MB...
+Attempt 1/5: CRF 34 → 48.5 MB (over target)
+Attempt 2/5: CRF 40 → 30.8 MB (over target)
+Attempt 3/5: CRF 43 → 25.3 MB (over target)
+Attempt 4/5: CRF 44 → 23.7 MB (fits)
+
+✔ Best candidate found under 25.0 MB (CRF 44)
+
+Original:  99.8 MB
+Output:    23.7 MB
+Reduction: 76.2%
+```
+
+## Install
+
+```
 cargo install ffrp
 ```
 
-Installing with Cargo requires Rust and Cargo. `ffmpeg` and `ffprobe` must also be installed and available in `PATH`. Check that both are available with:
+The crates.io package is `ffrp`; it installs the `fp` command.
 
-```sh
+**Requirements:** Rust and Cargo, plus `ffmpeg` and `ffprobe` available in your `PATH`. Check with:
+
+```
 ffmpeg -version
 ffprobe -version
 ```
 
+`fp` does not bundle FFmpeg. FFmpeg is a separate project with its own license.
+
 ## Usage
 
-Basic interactive compression:
-
-```sh
-fp compress video.mp4
 ```
-
-When `--size` is omitted, `fp` asks for a maximum file size. Presets are 10 MB, 25 MB, 50 MB, and 100 MB; Custom accepts a size such as `8mb`, `500mb`, or `1gb`. When `-o` is omitted in interactive mode, `fp` asks for an output filename and offers a default.
-
-Provide a maximum size directly to run without the size prompt:
-
-```sh
-fp compress video.mp4 --size 25mb
-```
-
-Supplying `--size` skips the size prompt. Supplying `-o` or `--output` skips the output filename prompt.
-
-Sizes accept decimal values with these units: `B`, `byte`, `bytes`, `K`/`KB`, `M`/`MB`, and `G`/`GB`. Binary units `KiB`, `MiB`, and `GiB` are also supported. Unit matching is case-insensitive. Examples include `8000000B`, `25mb`, `1.5 GB`, and `500 KiB`.
-
-Set a custom output path with `-o` or `--output`:
-
-```sh
-fp compress video.mp4 --size 25mb -o compressed.mp4
-```
-
-If no output path is supplied, the default is `<input-name>-compressed.<input-extension>` beside the input. For example, `video.mov` produces `video-compressed.mov`. Inputs without an extension use `.mp4`. Existing output files are never overwritten. Custom output paths may include a different directory.
-
-Files already at or below the maximum are normally left unchanged. Use `--force` to compress anyway:
-
-```sh
-fp compress video.mp4 --size 25mb --force
-```
-
-Very aggressive maximum sizes can cause significant quality loss. `fp` warns about this and allows you to continue.
-
-## Compression and dry run
-
-The size is a maximum, not an exact output size. `fp` tests a bounded set of quality candidates, measures their output sizes, and selects the best candidate it finds that fits under the maximum. It does not exhaustively test every possible quality setting. If no candidate fits, compression fails without publishing an oversized output.
-
-Use `--dry-run` to inspect the initial plan and FFmpeg command without encoding. The displayed CRF is only the initial candidate; measured encodes may lead the search to choose another. Dry-run does not create or overwrite the destination, even if it already exists:
-
-```sh
+fp compress video.mp4                      # interactive: asks for size and output name
+fp compress video.mp4 --size 25mb          # skip the size prompt
+fp compress video.mp4 --size 25mb -o out.mp4
 fp compress video.mp4 --size 25mb --dry-run
 ```
 
-## Options and help
+| Option | What it does |
+| --- | --- |
+| `--size SIZE` | Maximum output size. Omit it to get the interactive prompt (presets: 10, 25, 50, 100 MB, or custom). |
+| `-o`, `--output` | Output path. Default: `<input-name>-compressed.<ext>` next to the input. |
+| `--force` | Compress even if the input is already under the limit. |
+| `--dry-run` | Show the plan and the FFmpeg command without encoding or writing anything. |
+| `-v`, `--verbose` | Show FFmpeg diagnostics on stderr while encoding. |
 
-- `-o`, `--output`: output path and filename.
-- `--size SIZE`: maximum output size; omitting it enables the interactive size prompt.
-- `--force`: compress even when the input is already at or below the maximum.
-- `--dry-run`: show the initial plan and command without encoding or writing output.
-- `-v`, `--verbose`: show FFmpeg diagnostics on stderr during encoding. Without it, FFmpeg stderr is suppressed; failures still report that verbose mode can show diagnostics.
+**Sizes** accept decimals and these units, case-insensitive: `B`, `KB`, `MB`, `GB`, and `KiB`, `MiB`, `GiB`. Examples: `25mb`, `1.5 GB`, `500 KiB`, `8000000B`.
 
-```sh
-fp compress video.mp4 --size 25mb --verbose
-fp --help
-fp compress --help
-fp --version
+**Safety:** existing output files are never overwritten, and an oversized result is never published.
+
+## How it works
+
+The size you give is a **maximum**, not an exact target. `fp` reads the input with `ffprobe`, picks an initial quality (CRF) from the duration and target size, then runs a bounded set of test encodes and measures each result. It keeps the best candidate that fits.
+
+- It does **not** try every possible setting.
+- If no candidate fits, it fails instead of writing an oversized file.
+- Very aggressive limits (like 25 MB for a long 1080p video) can cause visible quality loss. `fp` warns you and lets you continue.
+- The CRF shown by `--dry-run` is only the starting guess; the measured encodes may choose a different one.
+
+## Limitations
+
+- Video compression only for now.
+- Needs `ffmpeg` and `ffprobe` installed.
+- The result is "best that fits", not a guaranteed exact size.
+
+## Development
+
+```
+cargo test
 ```
 
-## Examples
+## License
 
-```sh
-fp compress video.mp4
-fp compress video.mp4 --size 25mb
-fp compress video.mp4 --size 25mb -o compressed.mp4
-fp compress video.mp4 --size 25mb --dry-run
-fp compress video.mp4 --size 25mb --force
-```
+MIT.
