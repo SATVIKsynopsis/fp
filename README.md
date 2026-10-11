@@ -45,20 +45,51 @@ Reduction: 76.2%
 
 ## Install
 
+`fp` needs **FFmpeg** (`ffmpeg` and `ffprobe` on your PATH). Install it first if you don't have it:
+
+| System | Command |
+| --- | --- |
+| macOS | `brew install ffmpeg` |
+| Ubuntu / Debian | `sudo apt install ffmpeg` |
+| Windows | `winget install Gyan.FFmpeg` |
+
+Check with `ffmpeg -version` and `ffprobe -version`.
+
+### Option 1: download a prebuilt binary (no Rust needed)
+
+Get the archive for your system from the [latest release](https://github.com/SATVIKsynopsis/fp/releases/latest):
+
+| System | File |
+| --- | --- |
+| macOS, Apple Silicon (M1 and newer) | `fp-<version>-aarch64-apple-darwin.tar.gz` |
+| macOS, Intel | `fp-<version>-x86_64-apple-darwin.tar.gz` |
+| Linux, x86_64 | `fp-<version>-x86_64-unknown-linux-musl.tar.gz` |
+| Windows, x86_64 | `fp-<version>-x86_64-pc-windows-msvc.zip` |
+
+**macOS / Linux**
+```
+tar xzf fp-<version>-<target>.tar.gz
+sudo mv fp-<version>-<target>/fp /usr/local/bin/
+```
+
+**macOS only:** the binary isn't signed, so macOS may block it the first time. Run this once:
+```
+xattr -d com.apple.quarantine /usr/local/bin/fp
+```
+
+**Windows:** unzip, then move `fp.exe` to a folder on your PATH or run it from that folder with `.\fp.exe`.
+
+Optional: verify the download with the `.sha256` file from the release (`shasum -a 256 -c <file>.sha256` on macOS, `sha256sum -c <file>.sha256` on Linux).
+
+Linux ARM (for example Raspberry Pi) has no prebuilt binary yet. Use Option 2.
+
+### Option 2: with Cargo
+
 ```
 cargo install ffrp
 ```
 
-The crates.io package is `ffrp`; it installs the `fp` command.
-
-**Requirements:** Rust and Cargo, plus `ffmpeg` and `ffprobe` available in your `PATH`. Check with:
-
-```
-ffmpeg -version
-ffprobe -version
-```
-
-`fp` does not bundle FFmpeg. FFmpeg is a separate project with its own license.
+The crate is called `ffrp`; it installs the `fp` command.
 
 ## Usage
 
